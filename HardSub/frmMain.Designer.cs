@@ -133,7 +133,6 @@
 			this.txtPathSub.Name = "txtPathSub";
 			this.txtPathSub.Size = new System.Drawing.Size(507, 22);
 			this.txtPathSub.TabIndex = 0;
-			this.txtPathSub.TextChanged += new System.EventHandler(this.txtPathSub_TextChanged);
 			// 
 			// btnBrowseSub
 			// 

@@ -1,10 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 
@@ -12,60 +7,57 @@ namespace HardSub
 {
 	public partial class frmMain : Form
 	{
-		string _filePath { get; set; }
-		string _lang { get; set; }
+		StringComparison IC { get { return StringComparison.InvariantCultureIgnoreCase; } }
+
+		string _file; // API, host send current file
+		string _lang; // API, host send current language code
+		public string _fileavs; // API, host read this, cannot use get-set
 
 		public frmMain(string filePath, string lang)
 		{
 			InitializeComponent();
 			Icon = Properties.Resources.Burn_Disk;
 
-			_filePath = filePath;
+			_file = filePath;
 			_lang = lang;
+			_fileavs = Path.Combine(Path.GetDirectoryName(filePath), Path.GetFileNameWithoutExtension(filePath)) + ".avs";
 		}
 
 		private void frmMain_Load(object sender, EventArgs e)
 		{
-			lblVideoFile.Text = _filePath;
+			if (string.Equals(Path.GetExtension(_file), ".avs", IC))
+			{
+				MessageBox.Show("Please select non AviSynth script.");
+				Application.Exit();
+				return;
+			}
 
+			lblVideoFile.Text = _file;
 			txtPathDll.Text = Properties.Settings.Default.PathPlugin;
 			chkUsePluginFolder.Checked = Properties.Settings.Default.UsePluginFolder;
         }
 
-		private void txtPathSub_TextChanged(object sender, EventArgs e)
-		{
-			_filePath = txtPathSub.Text;
-		}
-
 		private void btnBrowseSub_Click(object sender, EventArgs e)
 		{
-			var GetFile = new OpenFileDialog();
-			GetFile.Filter = "Supported subtitle|*.sub;*.srt;*.ssa;*.ass|"
+			var getFile = new OpenFileDialog();
+			getFile.Filter = "Supported subtitle|*.sub;*.srt;*.ssa;*.ass|"
 				+ "Subtitle|*.sub|"
 				+ "SubRip|*.srt|"
 				+ "Sub Station Alpha|*.ssa;*.ass|"
 				+ "All Files|*.*";
 
-			GetFile.FilterIndex = 1;
-			GetFile.Multiselect = false;
+			getFile.FilterIndex = 1;
+			getFile.Multiselect = false;
 
-			if (GetFile.ShowDialog() == DialogResult.OK)
+			if (getFile.ShowDialog() == DialogResult.OK)
 			{
-				txtPathSub.Text = GetFile.FileName;
+				txtPathSub.Text = getFile.FileName;
 			}
 		}
 
 		private void txtPathDll_TextChanged(object sender, EventArgs e)
 		{
 			Properties.Settings.Default.PathPlugin = txtPathDll.Text;
-		}
-
-		private void chkUsePluginFolder_CheckedChanged(object sender, EventArgs e)
-		{
-			var x = chkUsePluginFolder.Checked;
-			Properties.Settings.Default.UsePluginFolder = x;
-			txtPathDll.Enabled = !x;
-			btnBrowseDll.Enabled = !x;
 		}
 
 		private void btnBrowseDll_Click(object sender, EventArgs e)
@@ -81,6 +73,14 @@ namespace HardSub
 			{
 				txtPathDll.Text = getFile.FileName;
 			}
+		}
+
+		private void chkUsePluginFolder_CheckedChanged(object sender, EventArgs e)
+		{
+			var x = chkUsePluginFolder.Checked;
+			Properties.Settings.Default.UsePluginFolder = x;
+			txtPathDll.Enabled = !x;
+			btnBrowseDll.Enabled = !x;
 		}
 
 		private void btnOK_Click(object sender, EventArgs e)
@@ -103,17 +103,19 @@ namespace HardSub
 			Properties.Settings.Default.Save();
 
 			string script = 
-				$"{(chkUsePluginFolder.Checked ? "#" : string.Empty)}LoadPlugin(\"{txtPathSub.Text}\")\r\n"
-				+ $"DirectShowSource(\"{_filePath}\")\r\n"
+				$"{(chkUsePluginFolder.Checked ? "#" : string.Empty)}LoadPlugin(\"{txtPathDll.Text}\")\r\n"
+				+ $"DirectShowSource(\"{_file}\")\r\n"
 				+ $"TextSub(\"{txtPathSub.Text}\")";
 
-			string newname = Path.GetFileNameWithoutExtension(_filePath) + ".avs";
+			File.WriteAllText(_fileavs, script, new UTF8Encoding(false));
 
-			File.WriteAllText(newname, script, new UTF8Encoding(false));
+			DialogResult = DialogResult.OK; // tell IFME it was OK
+			Close();
         }
 
 		private void btnCancel_Click(object sender, EventArgs e)
 		{
+			DialogResult = DialogResult.Cancel; // tell IFME user cancel the action
 			Close();
 		}
 	}
